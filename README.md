@@ -1,0 +1,1 @@
+# ai-action-setup-ollama
