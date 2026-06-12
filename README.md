@@ -1,1 +1,15 @@
-# ai-action-setup-ollama
+# ai-action/setup-ollama
+
+Set up GitHub Actions workflow with Ollama
+
+Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/ai-action/setup-ollama](https://github.com/ai-action/setup-ollama).
+
+## Versions
+
+| Version | Tag | Upstream commit |
+|---------|-----|-----------------|
+| v2.0.49 | [`v2.0.49`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.49) | [`5af6432`](https://github.com/ai-action/setup-ollama/commit/5af64322d719383ce292f3ac164c043cfba6a707) |
+
+## Privacy
+
+This Action contacts Chainguard's licensing server to verify authorization. Connection metadata (IP address, GitHub repository identifier, timestamp, and any metadata encoded in the auth token) is transmitted to Chainguard, Inc. even if authorization is denied in accordance with our [Privacy Notice](https://www.chainguard.dev/legal/privacy-notice)
