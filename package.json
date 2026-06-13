@@ -1,0 +1,50 @@
+{
+  "name": "setup-ollama",
+  "version": "2.0.51",
+  "description": "Set up GitHub Actions workflow with Ollama",
+  "author": "Mark <mark@remarkablemark.org>",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "ncc build --minify",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf coverage dist",
+    "lint": "eslint .",
+    "lint:fix": "npm run lint -- --fix",
+    "lint:tsc": "tsc --project tsconfig.test.json",
+    "prepare": "husky",
+    "test": "vitest run",
+    "test:ci": "CI=true npm test -- --color --coverage",
+    "test:watch": "vitest --coverage.enabled=false"
+  },
+  "dependencies": {
+    "@actions/core": "3.0.1",
+    "@actions/exec": "3.0.0",
+    "@actions/tool-cache": "4.0.0",
+    "semver": "7.8.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.0.2",
+    "@commitlint/config-conventional": "21.0.2",
+    "@eslint/config-helpers": "0.6.0",
+    "@eslint/eslintrc": "3.3.5",
+    "@eslint/js": "10.0.1",
+    "@vitest/coverage-v8": "4.1.8",
+    "@types/node": "25.9.1",
+    "@types/semver": "7.7.1",
+    "@vercel/ncc": "0.38.4",
+    "eslint": "10.4.1",
+    "eslint-plugin-prettier": "5.5.6",
+    "eslint-plugin-simple-import-sort": "13.0.0",
+    "eslint-plugin-tsdoc": "0.5.2",
+    "globals": "17.6.0",
+    "husky": "9.1.7",
+    "vitest": "4.1.8",
+    "lint-staged": "17.0.7",
+    "prettier": "3.8.3",
+    "ts-node": "10.9.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.60.1"
+  },
+  "private": true,
+  "license": "MIT"
+}
