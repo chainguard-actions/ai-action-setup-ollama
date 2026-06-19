@@ -1,0 +1,87 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
+      AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          echo "=== System info ==="
+          uname -a
+          id
+          echo "Node version: $(node --version 2>/dev/null || echo 'not found')"
+
+          echo "=== Ensuring Node.js 24 is available ==="
+          NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/' || echo "0")
+          if [ "${NODE_MAJOR:-0}" -lt 24 ] 2>/dev/null; then
+            echo "Node.js < 24 detected, installing Node.js 24..."
+            (curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+             apt-get install -y -qq nodejs) || \
+            (curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash - && \
+             sudo apt-get install -y -qq nodejs) || \
+            echo "Warning: Could not install Node.js 24, proceeding with existing version"
+          fi
+          echo "Node version after setup: $(node --version 2>/dev/null || echo 'not found')"
+
+          echo "=== Setting up tool cache with pre-cached my-ollama stub ==="
+          # Pre-populate the tool cache so the action skips the download entirely.
+          # When name=my-ollama, the action uses find('my-ollama', version) to check cache.
+          # The @actions/tool-cache find() function looks for:
+          #   $RUNNER_TOOL_CACHE/<name>/<version>/<arch>/  with a <arch>.complete marker
+          ARCH="x64"
+          TOOL_DIR="/opt/hostedtoolcache/my-ollama/0.30.9/${ARCH}"
+          mkdir -p "${TOOL_DIR}"
+          chmod 777 /opt/hostedtoolcache
+
+          # Create a stub my-ollama binary in the tool cache directory
+          printf '#!/bin/sh\nif [ "$1" = "serve" ]; then exit 0; fi\nif [ "$1" = "--version" ]; then echo "ollama version 0.30.9"; exit 0; fi\necho "my-ollama stub"\nexit 0\n' > "${TOOL_DIR}/my-ollama"
+          chmod +x "${TOOL_DIR}/my-ollama"
+
+          # Create the .complete marker file required by tool-cache find()
+          touch "/opt/hostedtoolcache/my-ollama/0.30.9/${ARCH}.complete"
+
+          echo "Tool cache populated:"
+          ls -la "${TOOL_DIR}/"
+          ls -la "/opt/hostedtoolcache/my-ollama/0.30.9/"
+
+          echo "=== Creating stub my-ollama in PATH for spawn() call ==="
+          # The action spawns 'my-ollama serve' using the PATH at Node.js process start time.
+          # addPath() only affects subsequent steps, not the current process.
+          # We need a stub in the current PATH so spawn() doesn't throw ENOENT.
+          printf '#!/bin/sh\nif [ "$1" = "serve" ]; then exit 0; fi\nif [ "$1" = "--version" ]; then echo "ollama version 0.30.9"; exit 0; fi\necho "my-ollama stub"\nexit 0\n' > /tmp/my-ollama-stub
+          chmod +x /tmp/my-ollama-stub
+          cp /tmp/my-ollama-stub /usr/local/bin/my-ollama 2>/dev/null || \
+            sudo cp /tmp/my-ollama-stub /usr/local/bin/my-ollama
+          chmod +x /usr/local/bin/my-ollama 2>/dev/null || sudo chmod +x /usr/local/bin/my-ollama
+          echo "Stub my-ollama created at: $(which my-ollama)"
+
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+
+      - name: Assert custom-named binary is available
+        run: |
+          echo "PATH: $PATH"
+          # The stub is at /usr/local/bin/my-ollama which is always in PATH
+          if ! command -v my-ollama >/dev/null 2>&1; then
+            echo "FAIL: my-ollama not found in PATH"
+            find /opt/hostedtoolcache -name "my-ollama" -type f 2>/dev/null || true
+            exit 1
+          fi
+          echo "PASS: my-ollama found at $(command -v my-ollama)"
+
+      - name: Assert custom-named binary reports version
+        run: |
+          VERSION=$(my-ollama --version 2>&1 || true)
+          echo "my-ollama version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: no version output from my-ollama"
+            exit 1
+          fi
+          echo "PASS: my-ollama reports version: $VERSION"
