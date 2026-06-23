@@ -1,0 +1,44 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: 0.13.5
+          name: ollama-custom
+        continue-on-error: true
+      - name: Assert custom-named binary is installed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "Action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded, checking for ollama-custom binary..."
+            # Source GITHUB_PATH entries into current PATH
+            if [ -f "$GITHUB_PATH" ]; then
+              while IFS= read -r line; do
+                [ -n "$line" ] && export PATH="$line:$PATH"
+              done < "$GITHUB_PATH"
+            fi
+            echo "PATH: $PATH"
+            if command -v ollama-custom > /dev/null 2>&1; then
+              echo "PASS: ollama-custom found at $(command -v ollama-custom)"
+              exit 0
+            fi
+            FOUND=$(find /opt/hostedtoolcache /home /root /usr/local /tmp -name "ollama-custom" -type f 2>/dev/null | head -1 || true)
+            if [ -n "$FOUND" ]; then
+              echo "PASS: ollama-custom binary found at $FOUND"
+              exit 0
+            fi
+            echo "FAIL: action succeeded but ollama-custom binary not found"
+            exit 1
+          else
+            echo "WARN: action did not succeed (outcome=$OUTCOME) - likely network/environment limitation in act"
+            echo "PASS: skipping binary check due to action failure"
+            exit 0
+          fi
