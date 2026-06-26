@@ -1,19 +1,114 @@
-# ai-action/setup-ollama
+<p align="center">
+  <img alt="Ollama" height="200" src="https://github.com/ai-action/assets/blob/master/logos/ollama.svg?raw=true">
+</p>
 
-Set up GitHub Actions workflow with Ollama
+# setup-ollama
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/ai-action/setup-ollama](https://github.com/ai-action/setup-ollama).
+[![version](https://img.shields.io/github/release/ai-action/setup-ollama)](https://github.com/ai-action/setup-ollama/releases)
+[![build](https://github.com/ai-action/setup-ollama/actions/workflows/build.yml/badge.svg)](https://github.com/ai-action/setup-ollama/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/ai-action/setup-ollama/graph/badge.svg?token=AB3XFS8HYL)](https://codecov.io/gh/ai-action/setup-ollama)
 
-## Versions
+🦙 Set up GitHub Actions workflow with [Ollama](https://github.com/ollama/ollama).
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v2.0.49 | [`v2.0.49`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.49) | [`5af6432`](https://github.com/ai-action/setup-ollama/commit/5af64322d719383ce292f3ac164c043cfba6a707) |
-| v2.0.50 | [`v2.0.50`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.50) | [`ae41715`](https://github.com/ai-action/setup-ollama/commit/ae41715183540ec9802b1a72eab4848bb2f3ca12) |
-| v2.0.51 | [`v2.0.51`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.51) | [`0a13c63`](https://github.com/ai-action/setup-ollama/commit/0a13c63c32327fdff963b335cb100f4b0673df89) |
-| v2.0.52 | [`v2.0.52`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.52) | [`b5b351a`](https://github.com/ai-action/setup-ollama/commit/b5b351a6ff6f1bc63efbb5a3fdb9ee709ee1ec4e) |
-| v2.0.54 | [`v2.0.54`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.54) | [`195af6b`](https://github.com/ai-action/setup-ollama/commit/195af6b8b8de746639b2ce7ffdba1c0ae70970d8) |
-| v2.0.56 | [`v2.0.56`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.56) | [`9f7e2f0`](https://github.com/ai-action/setup-ollama/commit/9f7e2f087b1b751efe322b972f6492dd6f2be943) |
+## Quick Start
+
+```yaml
+# .github/workflows/ollama.yml
+name: ollama
+on: push
+jobs:
+  ollama:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Ollama
+        uses: ai-action/setup-ollama@v2
+
+      - name: Run model
+        run: ollama run gemma4:e2b 'What model are you?'
+```
+
+## Usage
+
+Install Ollama:
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+```
+
+Run a prompt against a [model](https://ollama.com/library):
+
+```yaml
+- run: ollama run gemma4 "What's a large language model?"
+```
+
+Cache the model to speed up CI:
+
+```yaml
+- uses: actions/cache@v5
+  with:
+    path: ~/.ollama
+    key: ${{ runner.os }}-ollama
+
+- run: ollama run gemma4 'Define cache'
+```
+
+See [action.yml](action.yml).
+
+## Inputs
+
+### `version`
+
+**Optional**: The CLI [version](https://github.com/ollama/ollama/releases). Defaults to [`0.30.10`](https://github.com/ollama/ollama/releases/tag/v0.30.10):
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+  with:
+    version: 0.30.10
+```
+
+### `name`
+
+**Optional**: The CLI name. Defaults to `ollama`:
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+  with:
+    name: ollama
+```
+
+## FAQ
+
+### zstd: Cannot exec: No such file or directory
+
+If you get the error on a Linux self-hosted runner:
+
+```
+tar (child): zstd: Cannot exec: No such file or directory
+tar (child): Error is not recoverable: exiting now
+```
+
+It means that [zstd](https://github.com/facebook/zstd) is not installed.
+
+To fix this error, you can install `zstd`:
+
+```yaml
+- name: Install zstd
+  run: apt-get update && apt-get install zstd
+```
+
+Or use Ollama version <[0.14.0](https://github.com/ollama/ollama/releases/tag/v0.14.0):
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+  with:
+    version: 0.13.5
+```
+
+See [#423](https://github.com/ai-action/setup-ollama/issues/423).
+
+## License
+
+[MIT](LICENSE)
 
 ## Privacy
 
