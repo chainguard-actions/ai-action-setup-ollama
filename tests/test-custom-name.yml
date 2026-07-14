@@ -1,0 +1,37 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd
+        run: |
+          if command -v sudo &>/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y zstd
+          else
+            apt-get update -qq && apt-get install -y zstd
+          fi
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+      - name: Assert custom-named binary is installed
+        run: |
+          echo "Checking my-ollama is available in PATH..."
+          if ! command -v my-ollama &>/dev/null; then
+            echo "FAIL: 'my-ollama' command not found in PATH"
+            exit 1
+          fi
+          echo "PASS: my-ollama found at $(command -v my-ollama)"
+      - name: Assert custom-named binary reports correct version
+        run: |
+          VERSION_OUTPUT=$(my-ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -q "0.32.0"; then
+            echo "PASS: version 0.32.0 found in custom-named binary"
+          else
+            echo "FAIL: expected version 0.32.0 in output: $VERSION_OUTPUT"
+            exit 1
+          fi

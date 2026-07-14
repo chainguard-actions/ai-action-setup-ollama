@@ -1,0 +1,30 @@
+name: Test custom version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: 0.13.5
+      - name: Assert ollama is installed
+        run: |
+          echo "Checking ollama is available in PATH..."
+          if ! command -v ollama &>/dev/null; then
+            echo "FAIL: 'ollama' command not found in PATH"
+            exit 1
+          fi
+          echo "PASS: ollama found at $(command -v ollama)"
+      - name: Assert ollama version matches requested version
+        run: |
+          VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -q "0.13.5"; then
+            echo "PASS: version 0.13.5 found"
+          else
+            echo "FAIL: expected version 0.13.5 in output: $VERSION_OUTPUT"
+            exit 1
+          fi
