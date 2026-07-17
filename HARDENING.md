@@ -8,45 +8,58 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **ai-action--setup-ollama/v2.0.61** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **ai-action--setup-ollama/v2.0.61** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### unpinned-uses (severity: high)
 
-Multiple workflow files reference GitHub Actions using mutable tags instead of pinned full-length SHA commits. This exposes the workflow to supply-chain attacks if the upstream action tag is moved or compromised. Unpinned references found: actions/checkout@v7, actions/setup-node@v6, stefanzweifel/git-auto-commit-action@v7, googleapis/release-please-action@v5, codecov/codecov-action@v7, actions/cache@v6.
+All workflow files reference external actions using mutable version tags instead of full 40-character SHA commit hashes. This exposes the workflow to supply-chain attacks if a tag is moved or an action is compromised. Affected references include: actions/checkout@v7, actions/setup-node@v6, stefanzweifel/git-auto-commit-action@v7, googleapis/release-please-action@v5, codecov/codecov-action@v7, actions/cache@v6.
 
 Locations:
 
 - `.github/workflows/build.yml:12`
-- `.github/workflows/build.yml:16`
-- `.github/workflows/build.yml:26`
+- `.github/workflows/build.yml:17`
+- `.github/workflows/build.yml:27`
 - `.github/workflows/commitlint.yml:12`
 - `.github/workflows/commitlint.yml:17`
 - `.github/workflows/lint.yml:12`
 - `.github/workflows/lint.yml:17`
 - `.github/workflows/release-please.yml:22`
-- `.github/workflows/release-please.yml:34`
-- `.github/workflows/test.yml:13`
-- `.github/workflows/test.yml:16`
-- `.github/workflows/test.yml:28`
-- `.github/workflows/test.yml:61`
+- `.github/workflows/release-please.yml:33`
+- `.github/workflows/test.yml:12`
+- `.github/workflows/test.yml:17`
+- `.github/workflows/test.yml:27`
+- `.github/workflows/test.yml:47`
+- `.github/workflows/test.yml:54`
 - `.github/workflows/version.yml:18`
-- `.github/workflows/version.yml:27`
+- `.github/workflows/version.yml:28`
 
 ### script-injection (severity: high)
 
-Rule (a): GitHub Actions expressions are interpolated directly inside run: shell commands, allowing injection of arbitrary shell code. In release-please.yml 'Tag major and minor versions' step, ${{ needs.release.outputs.major }} and ${{ needs.release.outputs.minor }} are embedded directly in git tag/push commands. In release-please.yml 'Tag latest release' step, ${{ needs.release.outputs.tag_name }} is embedded directly in a gh release edit command. In test.yml 'Check version' step, ${{ env.VERSION }} is embedded directly inside a [[ ]] shell comparison. Rule (b): In dependabot.yml, $PR_URL (sourced from ${{ github.event.pull_request.html_url }}) is used unquoted in run: commands 'gh pr review --approve $PR_URL' and 'gh pr merge --auto --squash $PR_URL', allowing shell metacharacter injection.
+Sub-rule (a): Direct ${{ }} expression interpolation inside run: shell commands. In release-please.yml, the 'Tag major and minor versions' step interpolates ${{ needs.release.outputs.major }}, ${{ needs.release.outputs.minor }} directly into git tag and git push shell commands (e.g. `git tag -d v${{ needs.release.outputs.major }} || true`). The 'Tag latest release' step interpolates ${{ needs.release.outputs.tag_name }} directly into `gh release edit ${{ needs.release.outputs.tag_name }} --latest`. In test.yml, the 'Check version' step interpolates ${{ env.VERSION }} directly into a shell string: `if [[ "$(ollama-cli --version)" != *'${{ env.VERSION }}'* ]]; then`. All ${{ }} expressions are expanded by the YAML template engine before the shell ever sees them, enabling shell metacharacter injection.
 
 Locations:
 
+- `.github/workflows/release-please.yml:41`
+- `.github/workflows/release-please.yml:42`
 - `.github/workflows/release-please.yml:43`
-- `.github/workflows/release-please.yml:51`
-- `.github/workflows/test.yml:78`
-- `.github/workflows/dependabot.yml:22`
-- `.github/workflows/dependabot.yml:26`
+- `.github/workflows/release-please.yml:44`
+- `.github/workflows/release-please.yml:45`
+- `.github/workflows/release-please.yml:46`
+- `.github/workflows/release-please.yml:49`
+- `.github/workflows/test.yml:64`
+
+### script-injection (severity: high)
+
+Sub-rule (b): Unquoted shell variable expansion of untrusted data. In dependabot.yml, the job-level env var PR_URL is set from ${{ github.event.pull_request.html_url }} (attacker-controllable via pull_request_target). It is then used unquoted in two run: steps: `gh pr review --approve $PR_URL` and `gh pr merge --auto --squash $PR_URL`. An unquoted variable allows shell word-splitting and glob expansion of any metacharacters embedded in the URL value.
+
+Locations:
+
+- `.github/workflows/dependabot.yml:20`
+- `.github/workflows/dependabot.yml:23`
 
 ## Iteration Notes
 
@@ -56,5 +69,17 @@ Locations:
 
 **Notes:**
 
-Fixed all unpinned action references by resolving full commit SHAs for: actions/checkout@v7, actions/setup-node@v6, stefanzweifel/git-auto-commit-action@v7, googleapis/release-please-action@v5, codecov/codecov-action@v7, and actions/cache@v6. Fixed script injection in release-please.yml by moving needs.release.outputs.major, needs.release.outputs.minor, and needs.release.outputs.tag_name into step env blocks and referencing them as shell variables. Fixed script injection in test.yml by moving env.VERSION into a step-level env var EXPECTED_VERSION. Fixed script injection in dependabot.yml by quoting $PR_URL in both gh pr review and gh pr merge commands.
+Fixed all findings across 6 workflow files:
+
+1. **unpinned-uses** (build.yml, commitlint.yml, lint.yml, release-please.yml, test.yml, version.yml): Pinned all 6 external action references to full 40-character SHA commit hashes with mutable tag preserved in a comment:
+   - actions/checkout@v7 → @9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+   - actions/setup-node@v6 → @249970729cb0ef3589644e2896645e5dc5ba9c38
+   - stefanzweifel/git-auto-commit-action@v7 → @4a55954c782fc1ea30b9056cd3e7a2b40ca8887d
+   - googleapis/release-please-action@v5 → @45996ed1f6d02564a971a2fa1b5860e934307cf7
+   - codecov/codecov-action@v7 → @fb8b3582c8e4def4969c97caa2f19720cb33a72f
+   - actions/cache@v6 → @55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+
+2. **script-injection sub-rule (a)** (release-please.yml, test.yml): Moved all ${{ }} expressions out of run: shell strings into step-level env: blocks. In release-please.yml, MAJOR/MINOR/TAG_NAME env vars replace direct interpolation in git tag/push/gh commands. In test.yml, EXPECTED_VERSION env var replaces ${{ env.VERSION }} in the version check string.
+
+3. **script-injection sub-rule (b)** (dependabot.yml): Quoted $PR_URL in both shell commands (`"$PR_URL"`) to prevent word-splitting and glob expansion of attacker-controlled URL values.
 
