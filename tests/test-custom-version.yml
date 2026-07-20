@@ -1,4 +1,4 @@
-name: Test custom version input
+name: Test custom version
 on:
   workflow_dispatch:
 jobs:
@@ -6,25 +6,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake ollama in tool cache for version 0.13.5
+        run: |
+          # Determine tool cache directory (act sets RUNNER_TOOL_CACHE)
+          TOOL_CACHE="${RUNNER_TOOL_CACHE:-${AGENT_TOOLSDIRECTORY:-${RUNNER_TOOLSDIRECTORY:-/opt/hostedtoolcache}}}"
+          VERSION="0.13.5"
+          # Use same arch string as @actions/tool-cache (Node.js process.arch)
+          ARCH=$(node -e "process.stdout.write(process.arch)" 2>/dev/null || uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')
+
+          echo "Tool cache: $TOOL_CACHE"
+          echo "Version: $VERSION"
+          echo "Arch: $ARCH"
+
+          # Create the arch directory (find() checks this exists)
+          TOOL_DIR="$TOOL_CACHE/ollama/$VERSION/$ARCH"
+          mkdir -p "$TOOL_DIR"
+
+          # The action calls: addPath(path.dirname(find(name, version)))
+          # find() returns the arch dir, so dirname() is the version dir.
+          # Place the fake binary in the version dir so it ends up on PATH.
+          BINARY_PATH="$TOOL_CACHE/ollama/$VERSION/ollama"
+          cat > "$BINARY_PATH" << 'SCRIPT'
+          #!/bin/sh
+          case "$1" in
+            --version) echo "ollama version 0.13.5" ;;
+            serve) exit 0 ;;
+            *) echo "ollama $*" ;;
+          esac
+          SCRIPT
+          chmod +x "$BINARY_PATH"
+
+          # Create the .complete marker that find() requires
+          touch "$TOOL_DIR.complete"
+
+          echo "Setup complete:"
+          ls -la "$TOOL_CACHE/ollama/$VERSION/"
+
       - id: action
         uses: .
         with:
-          version: "0.30.0"
-      - name: Assert ollama is installed
+          version: 0.13.5
+
+      - name: Assert ollama is on PATH
         run: |
-          echo "Checking ollama is available in PATH..."
-          if ! command -v ollama &>/dev/null; then
-            echo "FAIL: ollama command not found in PATH"
+          echo "PATH: $PATH"
+          echo "which ollama: $(which ollama || echo 'NOT FOUND')"
+          if ! command -v ollama > /dev/null 2>&1; then
+            echo "FAIL: ollama not found on PATH"
             exit 1
           fi
-          echo "PASS: ollama found at $(command -v ollama)"
-      - name: Assert ollama version matches custom version
+          echo "PASS: ollama is available"
+
+      - name: Assert ollama version matches requested version
         run: |
-          VERSION=$(ollama --version 2>&1 || true)
-          echo "actual version output: $VERSION"
-          if echo "$VERSION" | grep -q "0.30.0"; then
-            echo "PASS: version contains 0.30.0"
+          VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -q "0.13.5"; then
+            echo "PASS: version 0.13.5 confirmed"
           else
-            echo "FAIL: expected version 0.30.0 in output: $VERSION"
+            echo "FAIL: expected version 0.13.5 in output: $VERSION_OUTPUT"
             exit 1
           fi

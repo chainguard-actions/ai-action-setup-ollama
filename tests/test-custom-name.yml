@@ -1,4 +1,4 @@
-name: Test custom name input
+name: Test custom CLI name
 on:
   workflow_dispatch:
 jobs:
@@ -6,24 +6,66 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake my-ollama in tool cache
+        run: |
+          # Determine tool cache directory (act sets RUNNER_TOOL_CACHE)
+          TOOL_CACHE="${RUNNER_TOOL_CACHE:-${AGENT_TOOLSDIRECTORY:-${RUNNER_TOOLSDIRECTORY:-/opt/hostedtoolcache}}}"
+          VERSION="0.31.1"
+          NAME="my-ollama"
+          # Use same arch string as @actions/tool-cache (Node.js process.arch)
+          ARCH=$(node -e "process.stdout.write(process.arch)" 2>/dev/null || uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')
+
+          echo "Tool cache: $TOOL_CACHE"
+          echo "Version: $VERSION"
+          echo "Name: $NAME"
+          echo "Arch: $ARCH"
+
+          # Create the arch directory (find() checks this exists)
+          TOOL_DIR="$TOOL_CACHE/$NAME/$VERSION/$ARCH"
+          mkdir -p "$TOOL_DIR"
+
+          # The action calls: addPath(path.dirname(find(name, version)))
+          # find() returns the arch dir, so dirname() is the version dir.
+          # Place the fake binary in the version dir so it ends up on PATH.
+          BINARY_PATH="$TOOL_CACHE/$NAME/$VERSION/$NAME"
+          cat > "$BINARY_PATH" << 'SCRIPT'
+          #!/bin/sh
+          case "$1" in
+            --version) echo "ollama version 0.31.1" ;;
+            serve) exit 0 ;;
+            *) echo "my-ollama $*" ;;
+          esac
+          SCRIPT
+          chmod +x "$BINARY_PATH"
+
+          # Create the .complete marker that find() requires
+          touch "$TOOL_DIR.complete"
+
+          echo "Setup complete:"
+          ls -la "$TOOL_CACHE/$NAME/$VERSION/"
+
       - id: action
         uses: .
         with:
-          name: "ollama-custom"
-      - name: Assert custom-named binary is installed
+          name: my-ollama
+
+      - name: Assert custom-named binary is on PATH
         run: |
-          echo "Checking ollama-custom is available in PATH..."
-          if ! command -v ollama-custom &>/dev/null; then
-            echo "FAIL: ollama-custom command not found in PATH"
+          echo "PATH: $PATH"
+          echo "which my-ollama: $(which my-ollama || echo 'NOT FOUND')"
+          if ! command -v my-ollama > /dev/null 2>&1; then
+            echo "FAIL: my-ollama not found on PATH"
             exit 1
           fi
-          echo "PASS: ollama-custom found at $(command -v ollama-custom)"
-      - name: Assert custom binary runs correctly
+          echo "PASS: my-ollama is available"
+
+      - name: Assert custom-named binary runs
         run: |
-          VERSION=$(ollama-custom --version 2>&1 || true)
-          echo "actual version output: $VERSION"
-          if [ -z "$VERSION" ]; then
-            echo "FAIL: ollama-custom --version returned empty output"
+          VERSION_OUTPUT=$(my-ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: my-ollama --version returned empty output"
             exit 1
           fi
-          echo "PASS: ollama-custom --version returned: $VERSION"
+          echo "PASS: my-ollama --version returned: $VERSION_OUTPUT"
