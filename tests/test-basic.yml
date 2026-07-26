@@ -1,0 +1,36 @@
+name: Test basic usage (default version)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd (required for ollama >= 0.14.0)
+        run: |
+          if ! command -v zstd > /dev/null 2>&1; then
+            apt-get update -qq
+            apt-get install -y -qq zstd
+          fi
+          echo "zstd version: $(zstd --version)"
+      - id: action
+        uses: .
+      - name: Assert ollama is installed and on PATH
+        run: |
+          echo "Checking ollama is on PATH..."
+          if ! command -v ollama > /dev/null 2>&1; then
+            echo "FAIL: ollama not found on PATH"
+            exit 1
+          fi
+          echo "PASS: ollama found at $(command -v ollama)"
+      - name: Assert ollama version output contains default version
+        run: |
+          echo "Checking ollama version..."
+          VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -qF "0.32.4"; then
+            echo "PASS: version matches 0.32.4"
+          else
+            echo "FAIL: expected version 0.32.4 in output: $VERSION_OUTPUT"
+            exit 1
+          fi
