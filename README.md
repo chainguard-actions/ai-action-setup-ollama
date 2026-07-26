@@ -20,6 +20,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v2.0.61 | [`v2.0.61`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.61) | [`3eda917`](https://github.com/ai-action/setup-ollama/commit/3eda917064a3352c4b55053c1fb16181fedab4f3) |
 | v2.0.62 | [`v2.0.62`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.62) | [`591531f`](https://github.com/ai-action/setup-ollama/commit/591531fff1153f90ea7a512c1c528231856f1036) |
 | v2.0.63 | [`v2.0.63`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.63) | [`b1d0412`](https://github.com/ai-action/setup-ollama/commit/b1d04121d9feaa3b95181cd2f409a8b36318f425) |
+| v2.0.64 | [`v2.0.64`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.64) | [`1fc1796`](https://github.com/ai-action/setup-ollama/commit/1fc1796fd96f76470584d3a2fdc95e6327655dd6) |
 
 ## Privacy
 
