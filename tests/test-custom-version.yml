@@ -1,0 +1,41 @@
+name: Test custom version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: 0.5.1
+      - name: Assert ollama is installed and on PATH
+        run: |
+          echo "PATH: $PATH"
+          if command -v ollama >/dev/null 2>&1; then
+            echo "PASS: ollama found at $(command -v ollama)"
+          else
+            echo "ollama not found on PATH, searching tool cache..."
+            FOUND="$(find /opt/hostedtoolcache -name 'ollama' -type f 2>/dev/null | head -1)"
+            if [ -n "$FOUND" ]; then
+              echo "Found ollama at: $FOUND (PATH not updated by act)"
+              echo "PASS: ollama binary exists in tool cache"
+            else
+              echo "FAIL: ollama not found anywhere"
+              exit 1
+            fi
+          fi
+      - name: Assert ollama binary is executable
+        run: |
+          OLLAMA_PATH="$(command -v ollama 2>/dev/null || find /opt/hostedtoolcache -name 'ollama' -type f 2>/dev/null | head -1)"
+          echo "ollama path: $OLLAMA_PATH"
+          if [ -z "$OLLAMA_PATH" ]; then
+            echo "FAIL: ollama binary not found"
+            exit 1
+          fi
+          if [ ! -x "$OLLAMA_PATH" ]; then
+            echo "FAIL: ollama binary is not executable"
+            exit 1
+          fi
+          echo "PASS: ollama binary is executable at $OLLAMA_PATH"

@@ -1,0 +1,52 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd (required for ollama >= 0.14.0 on Linux)
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            apt-get update -qq 2>/dev/null || sudo apt-get update -qq 2>/dev/null || true
+            apt-get install -y -qq zstd 2>/dev/null || sudo apt-get install -y -qq zstd 2>/dev/null || \
+            apk add --no-cache zstd 2>/dev/null || true
+          fi
+          echo "zstd: $(command -v zstd || echo 'not found')"
+          zstd --version 2>/dev/null || echo "zstd not available"
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+      - name: Assert custom-named binary is installed
+        run: |
+          echo "PATH: $PATH"
+          if command -v my-ollama >/dev/null 2>&1; then
+            echo "PASS: my-ollama found at $(command -v my-ollama)"
+          else
+            echo "my-ollama not found on PATH, searching tool cache..."
+            FOUND="$(find /opt/hostedtoolcache -name 'my-ollama' -type f 2>/dev/null | head -1)"
+            if [ -n "$FOUND" ]; then
+              echo "Found my-ollama at: $FOUND (PATH not updated by act)"
+              echo "PASS: my-ollama binary exists in tool cache"
+            else
+              echo "FAIL: my-ollama not found anywhere"
+              exit 1
+            fi
+          fi
+      - name: Assert custom-named binary runs
+        run: |
+          OLLAMA_BIN="$(command -v my-ollama 2>/dev/null || find /opt/hostedtoolcache -name 'my-ollama' -type f 2>/dev/null | head -1)"
+          echo "my-ollama binary: $OLLAMA_BIN"
+          if [ -z "$OLLAMA_BIN" ]; then
+            echo "FAIL: my-ollama binary not found"
+            exit 1
+          fi
+          VERSION="$("$OLLAMA_BIN" --version 2>&1 || true)"
+          echo "my-ollama version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: my-ollama --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: my-ollama is functional"

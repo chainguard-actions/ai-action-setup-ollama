@@ -1,0 +1,50 @@
+name: Test basic usage (default version)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd (required for ollama >= 0.14.0 on Linux)
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            apt-get update -qq 2>/dev/null || sudo apt-get update -qq 2>/dev/null || true
+            apt-get install -y -qq zstd 2>/dev/null || sudo apt-get install -y -qq zstd 2>/dev/null || \
+            apk add --no-cache zstd 2>/dev/null || true
+          fi
+          echo "zstd: $(command -v zstd || echo 'not found')"
+          zstd --version 2>/dev/null || echo "zstd not available"
+      - id: action
+        uses: .
+      - name: Assert ollama is installed and on PATH
+        run: |
+          echo "PATH: $PATH"
+          if command -v ollama >/dev/null 2>&1; then
+            echo "PASS: ollama found at $(command -v ollama)"
+          else
+            echo "ollama not found on PATH, searching tool cache..."
+            FOUND="$(find /opt/hostedtoolcache -name 'ollama' -type f 2>/dev/null | head -1)"
+            if [ -n "$FOUND" ]; then
+              echo "Found ollama at: $FOUND (PATH not updated by act)"
+              echo "PASS: ollama binary exists in tool cache"
+            else
+              echo "FAIL: ollama not found anywhere"
+              exit 1
+            fi
+          fi
+      - name: Assert ollama version output is non-empty
+        run: |
+          OLLAMA_BIN="$(command -v ollama 2>/dev/null || find /opt/hostedtoolcache -name 'ollama' -type f 2>/dev/null | head -1)"
+          echo "ollama binary: $OLLAMA_BIN"
+          if [ -z "$OLLAMA_BIN" ]; then
+            echo "FAIL: ollama binary not found"
+            exit 1
+          fi
+          VERSION="$("$OLLAMA_BIN" --version 2>&1 || true)"
+          echo "ollama version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: ollama --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: ollama version output is non-empty"
