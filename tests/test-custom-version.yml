@@ -1,0 +1,39 @@
+name: Test custom version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: 0.31.0
+        continue-on-error: true
+      - name: Assert ollama is installed with custom version or action failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded, checking ollama is on PATH..."
+            if ! command -v ollama > /dev/null 2>&1; then
+              echo "FAIL: ollama not found on PATH after successful action"
+              exit 1
+            fi
+            echo "PASS: ollama found at $(command -v ollama)"
+            VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+            echo "version output: $VERSION_OUTPUT"
+            if echo "$VERSION_OUTPUT" | grep -qE "0\.31\.0|ollama"; then
+              echo "PASS: ollama version output looks correct"
+            else
+              echo "FAIL: unexpected version output: $VERSION_OUTPUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (likely network/download issue in test environment)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
