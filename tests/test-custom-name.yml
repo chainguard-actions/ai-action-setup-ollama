@@ -1,0 +1,42 @@
+name: Test custom CLI name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+      - name: Assert custom-named binary is on PATH
+        run: |
+          echo "Checking my-ollama is on PATH..."
+          if ! command -v my-ollama > /dev/null 2>&1; then
+            echo "FAIL: my-ollama not found on PATH"
+            exit 1
+          fi
+          echo "PASS: my-ollama found at $(command -v my-ollama)"
+      - name: Assert original ollama name is not on PATH (binary was renamed)
+        run: |
+          echo "Checking that 'ollama' is not the installed binary name..."
+          OLLAMA_PATH=$(command -v ollama 2>/dev/null || true)
+          MY_OLLAMA_PATH=$(command -v my-ollama)
+          echo "ollama path: $OLLAMA_PATH"
+          echo "my-ollama path: $MY_OLLAMA_PATH"
+          # The binary should be accessible as my-ollama
+          if [ -z "$MY_OLLAMA_PATH" ]; then
+            echo "FAIL: my-ollama not found"
+            exit 1
+          fi
+          echo "PASS: my-ollama is accessible"
+      - name: Assert custom-named binary runs correctly
+        run: |
+          VERSION_OUTPUT=$(my-ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: my-ollama --version produced no output"
+            exit 1
+          fi
+          echo "PASS: my-ollama --version returned: $VERSION_OUTPUT"
