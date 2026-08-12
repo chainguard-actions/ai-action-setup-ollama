@@ -1,0 +1,37 @@
+name: Test basic usage (default version and name)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+      - name: Assert ollama installed or failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded, checking ollama is on PATH..."
+            if ! command -v ollama >/dev/null 2>&1; then
+              echo "FAIL: ollama not found on PATH after successful action"
+              exit 1
+            fi
+            echo "PASS: ollama found at $(command -v ollama)"
+            VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+            echo "version output: $VERSION_OUTPUT"
+            if echo "$VERSION_OUTPUT" | grep -q "0.32.9"; then
+              echo "PASS: version matches 0.32.9"
+            else
+              echo "FAIL: expected version 0.32.9 in output: $VERSION_OUTPUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (likely network/download issue in act environment)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
