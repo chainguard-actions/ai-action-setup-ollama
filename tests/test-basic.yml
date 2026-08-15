@@ -1,0 +1,36 @@
+name: Test basic usage (default inputs)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zstd
+          zstd --version
+      - id: action
+        uses: .
+      - name: Assert ollama is on PATH
+        run: |
+          echo "PATH: $PATH"
+          echo "which ollama: $(which ollama || echo 'NOT FOUND')"
+          if ! command -v ollama > /dev/null 2>&1; then
+            echo "FAIL: ollama not found on PATH"
+            exit 1
+          fi
+          echo "PASS: ollama is available"
+      - name: Assert ollama version matches default
+        run: |
+          VERSION="$(ollama --version 2>&1 || true)"
+          echo "ollama version output: $VERSION"
+          if echo "$VERSION" | grep -qF "0.30.5"; then
+            echo "PASS: version 0.30.5 found"
+          else
+            echo "FAIL: expected version 0.30.5 in output: $VERSION"
+            exit 1
+          fi

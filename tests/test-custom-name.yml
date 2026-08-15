@@ -1,0 +1,37 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zstd
+          zstd --version
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+      - name: Assert custom-named binary is on PATH
+        run: |
+          echo "PATH: $PATH"
+          echo "which my-ollama: $(which my-ollama || echo 'NOT FOUND')"
+          if ! command -v my-ollama > /dev/null 2>&1; then
+            echo "FAIL: my-ollama not found on PATH"
+            exit 1
+          fi
+          echo "PASS: my-ollama is available"
+      - name: Assert custom-named binary reports version
+        run: |
+          VERSION="$(my-ollama --version 2>&1 || true)"
+          echo "my-ollama version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: my-ollama --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: my-ollama --version returned: $VERSION"

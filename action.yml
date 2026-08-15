@@ -11,9 +11,9 @@ inputs:
     required: false
     default: ollama
 runs:
+  pre: chainguard-phonehome.js
   using: node24
   main: dist/index.js
-  pre: chainguard-phonehome.js
 branding:
   icon: terminal
   color: gray-dark
