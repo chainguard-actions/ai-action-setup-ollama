@@ -1,0 +1,77 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up tool cache with fake my-ollama binary (version 0.13.5)
+        run: |
+          # Use a writable temp directory for the tool cache
+          TOOL_CACHE="/tmp/hostedtoolcache"
+          mkdir -p "$TOOL_CACHE"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+
+          # Ensure RUNNER_TEMP is set
+          if [ -z "$RUNNER_TEMP" ]; then
+            mkdir -p /tmp/runner-temp
+            echo "RUNNER_TEMP=/tmp/runner-temp" >> "$GITHUB_ENV"
+          fi
+
+          VERSION="0.13.5"
+          MACHINE=$(uname -m)
+          case "$MACHINE" in
+            x86_64) ARCH="x64" ;;
+            aarch64) ARCH="arm64" ;;
+            *) ARCH="$MACHINE" ;;
+          esac
+
+          # Create the arch directory for 'my-ollama' (required by @actions/tool-cache find())
+          ARCH_DIR="$TOOL_CACHE/my-ollama/$VERSION/$ARCH"
+          mkdir -p "$ARCH_DIR"
+
+          # Create fake my-ollama binary in the arch directory
+          printf '#!/bin/sh\necho "ollama version %s"\n' "$VERSION" > "$ARCH_DIR/my-ollama"
+          chmod +x "$ARCH_DIR/my-ollama"
+
+          # Create the .complete marker file (sibling of arch directory)
+          touch "$TOOL_CACHE/my-ollama/$VERSION/$ARCH.complete"
+
+          # Also put the binary in the version directory
+          # The action calls addPath(path.dirname(find(name, version)))
+          # find() returns the arch directory, so dirname is the version directory
+          VERSION_DIR="$TOOL_CACHE/my-ollama/$VERSION"
+          printf '#!/bin/sh\necho "ollama version %s"\n' "$VERSION" > "$VERSION_DIR/my-ollama"
+          chmod +x "$VERSION_DIR/my-ollama"
+
+          echo "Tool cache populated:"
+          ls -la "$ARCH_DIR/"
+          ls -la "$VERSION_DIR/"
+
+      - id: action
+        uses: .
+        with:
+          version: "0.13.5"
+          name: my-ollama
+
+      - name: Assert custom-named binary is on PATH
+        run: |
+          echo "PATH: $PATH"
+          echo "which my-ollama: $(which my-ollama 2>/dev/null || echo 'not found')"
+          if ! command -v my-ollama > /dev/null 2>&1; then
+            echo "FAIL: my-ollama not found on PATH"
+            exit 1
+          fi
+          echo "PASS: my-ollama is available at $(which my-ollama)"
+
+      - name: Assert custom-named binary runs
+        run: |
+          VERSION="$(my-ollama --version 2>&1 || true)"
+          echo "my-ollama version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: my-ollama --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: my-ollama version output is non-empty"
