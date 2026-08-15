@@ -1,0 +1,40 @@
+name: build
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          cache: npm
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build artifact
+        run: npm run build
+
+      - name: Git commit and push
+        if: github.actor == 'dependabot[bot]'
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7
+        with:
+          commit_message: 'feat: update build artifacts'
+
+      - name: Check Git working tree
+        run: |
+          if [[ $(git diff --stat) != '' ]]; then
+            echo 'Detected uncommitted changes. See status below:'
+            git diff
+            exit 1
+          fi
