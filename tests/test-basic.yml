@@ -1,0 +1,57 @@
+name: Test basic usage (default version)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/tool-cache
+      RUNNER_TEMP: /tmp
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          mkdir -p /tmp/tool-cache
+          echo "node version: $(node --version 2>/dev/null || echo 'not found')"
+          echo "uname: $(uname -a)"
+          echo "PATH: $PATH"
+      - name: Install zstd (required for .tar.zst extraction on Linux >= 0.14.0)
+        run: |
+          if command -v zstd > /dev/null 2>&1; then
+            echo "zstd already installed: $(zstd --version)"
+          else
+            echo "Installing zstd..."
+            apt-get update -qq && apt-get install -y zstd \
+              || sudo apt-get update -qq && sudo apt-get install -y zstd
+            echo "zstd installed: $(zstd --version)"
+          fi
+      - id: action
+        uses: .
+      - name: Assert ollama is installed
+        run: |
+          echo "PATH after action: $PATH"
+          echo "Checking ollama is on PATH..."
+          if ! command -v ollama > /dev/null 2>&1; then
+            echo "FAIL: ollama command not found on PATH"
+            exit 1
+          fi
+          echo "PASS: ollama found at $(command -v ollama)"
+      - name: Assert ollama binary is executable
+        run: |
+          OLLAMA_PATH="$(command -v ollama)"
+          echo "ollama path: $OLLAMA_PATH"
+          if [ ! -x "$OLLAMA_PATH" ]; then
+            echo "FAIL: ollama binary is not executable"
+            exit 1
+          fi
+          echo "PASS: ollama binary is executable"
+      - name: Assert ollama version matches default
+        run: |
+          VERSION="$(ollama --version 2>&1 || true)"
+          echo "actual version output: $VERSION"
+          if echo "$VERSION" | grep -q "0.30.6"; then
+            echo "PASS: version 0.30.6 found"
+          else
+            echo "FAIL: expected version 0.30.6 in output: $VERSION"
+            exit 1
+          fi
