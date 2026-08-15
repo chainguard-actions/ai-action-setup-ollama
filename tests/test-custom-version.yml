@@ -4,48 +4,53 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Pre-populate tool cache with fake ollama binary (version 0.29.0)
+        run: |
+          VERSION="0.29.0"
+          NAME="ollama"
+          ARCH="x64"
+          CACHE_ROOT="$RUNNER_TOOL_CACHE"
+          ARCH_DIR="$CACHE_ROOT/$NAME/$VERSION/$ARCH"
+          VERSION_DIR="$CACHE_ROOT/$NAME/$VERSION"
+
+          mkdir -p "$ARCH_DIR"
+          touch "$ARCH_DIR.complete"
+
+          # Write fake binary using printf (no heredoc to avoid YAML issues)
+          printf '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "ollama version 0.29.0"; elif [ "$1" = "serve" ]; then exit 0; fi\n' > "$VERSION_DIR/$NAME"
+          chmod +x "$VERSION_DIR/$NAME"
+
+          printf '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "ollama version 0.29.0"; elif [ "$1" = "serve" ]; then exit 0; fi\n' > "$ARCH_DIR/$NAME"
+          chmod +x "$ARCH_DIR/$NAME"
+
+          echo "Tool cache populated:"
+          ls -la "$VERSION_DIR"
+          ls -la "$ARCH_DIR"
+
       - id: action
         uses: .
         with:
-          version: 0.13.5
-        continue-on-error: true
-      - name: Assert ollama binary is installed for requested version
-        env:
-          OUTCOME: ${{ steps.action.outcome }}
+          version: 0.29.0
+
+      - name: Assert ollama is installed
         run: |
-          echo "Action outcome: $OUTCOME"
-          if [ "$OUTCOME" = "success" ]; then
-            echo "Action succeeded, checking for ollama binary (version 0.13.5)..."
-            # Source GITHUB_PATH entries into current PATH
-            if [ -f "$GITHUB_PATH" ]; then
-              while IFS= read -r line; do
-                [ -n "$line" ] && export PATH="$line:$PATH"
-              done < "$GITHUB_PATH"
-            fi
-            echo "PATH: $PATH"
-            OLLAMA_BIN=""
-            if command -v ollama > /dev/null 2>&1; then
-              OLLAMA_BIN=$(command -v ollama)
-            else
-              OLLAMA_BIN=$(find /opt/hostedtoolcache /home /root /usr/local /tmp -name "ollama" -type f 2>/dev/null | head -1 || true)
-            fi
-            if [ -z "$OLLAMA_BIN" ]; then
-              echo "FAIL: action succeeded but ollama binary not found"
-              exit 1
-            fi
-            echo "PASS: ollama binary found at $OLLAMA_BIN"
-            VERSION_OUTPUT=$("$OLLAMA_BIN" --version 2>&1 || true)
-            echo "version output: $VERSION_OUTPUT"
-            if echo "$VERSION_OUTPUT" | grep -q "0.13.5"; then
-              echo "PASS: version 0.13.5 confirmed"
-            else
-              echo "PASS: ollama installed (version string format may differ)"
-            fi
-            exit 0
+          echo "PATH=$PATH"
+          echo "Checking ollama is on PATH..."
+          which ollama || { echo "FAIL: ollama not found on PATH"; exit 1; }
+          echo "PASS: ollama found at $(which ollama)"
+
+      - name: Assert ollama version matches specified version
+        run: |
+          VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -q "0.29.0"; then
+            echo "PASS: version matches 0.29.0"
           else
-            echo "WARN: action did not succeed (outcome=$OUTCOME) - likely network/environment limitation in act"
-            echo "PASS: skipping binary check due to action failure"
-            exit 0
+            echo "FAIL: expected version 0.29.0 in output: $VERSION_OUTPUT"
+            exit 1
           fi
