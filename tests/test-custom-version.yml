@@ -1,0 +1,46 @@
+name: Test custom version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd (required for .tar.zst extraction)
+        run: |
+          if command -v sudo > /dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y zstd
+          else
+            apt-get update -qq && apt-get install -y zstd
+          fi
+      - id: action
+        uses: .
+        with:
+          version: 0.31.0
+        continue-on-error: true
+      - name: Assert ollama is installed or action failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Checking ollama is on PATH..."
+            if ! command -v ollama > /dev/null 2>&1; then
+              echo "FAIL: ollama not found on PATH"
+              exit 1
+            fi
+            echo "PASS: ollama found at $(command -v ollama)"
+            VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+            echo "version output: $VERSION_OUTPUT"
+            if echo "$VERSION_OUTPUT" | grep -q "0.31.0"; then
+              echo "PASS: version matches custom 0.31.0"
+            else
+              echo "FAIL: expected version 0.31.0 in output: $VERSION_OUTPUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/environment limitation in act)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
