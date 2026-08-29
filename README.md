@@ -1,35 +1,114 @@
-# ai-action/setup-ollama
+<p align="center">
+  <img alt="Ollama" height="200" src="https://github.com/ai-action/assets/blob/master/logos/ollama.svg?raw=true">
+</p>
 
-Set up GitHub Actions workflow with Ollama
+# setup-ollama
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/ai-action/setup-ollama](https://github.com/ai-action/setup-ollama).
+[![version](https://img.shields.io/github/release/ai-action/setup-ollama)](https://github.com/ai-action/setup-ollama/releases)
+[![build](https://github.com/ai-action/setup-ollama/actions/workflows/build.yml/badge.svg)](https://github.com/ai-action/setup-ollama/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/ai-action/setup-ollama/graph/badge.svg?token=AB3XFS8HYL)](https://codecov.io/gh/ai-action/setup-ollama)
 
-## Versions
+🦙 Set up GitHub Actions workflow with [Ollama](https://github.com/ollama/ollama).
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v2.0.49 | [`v2.0.49`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.49) | [`5af6432`](https://github.com/ai-action/setup-ollama/commit/5af64322d719383ce292f3ac164c043cfba6a707) |
-| v2.0.50 | [`v2.0.50`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.50) | [`ae41715`](https://github.com/ai-action/setup-ollama/commit/ae41715183540ec9802b1a72eab4848bb2f3ca12) |
-| v2.0.51 | [`v2.0.51`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.51) | [`0a13c63`](https://github.com/ai-action/setup-ollama/commit/0a13c63c32327fdff963b335cb100f4b0673df89) |
-| v2.0.52 | [`v2.0.52`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.52) | [`b5b351a`](https://github.com/ai-action/setup-ollama/commit/b5b351a6ff6f1bc63efbb5a3fdb9ee709ee1ec4e) |
-| v2.0.54 | [`v2.0.54`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.54) | [`195af6b`](https://github.com/ai-action/setup-ollama/commit/195af6b8b8de746639b2ce7ffdba1c0ae70970d8) |
-| v2.0.56 | [`v2.0.56`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.56) | [`9f7e2f0`](https://github.com/ai-action/setup-ollama/commit/9f7e2f087b1b751efe322b972f6492dd6f2be943) |
-| v2.0.57 | [`v2.0.57`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.57) | [`7c4a03f`](https://github.com/ai-action/setup-ollama/commit/7c4a03fda24c7b1d7dbff1cf1c7b139c343fead9) |
-| v2.0.58 | [`v2.0.58`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.58) | [`9c8df9f`](https://github.com/ai-action/setup-ollama/commit/9c8df9f1bd810da7b9bef7c75e5546d67e9b3b6b) |
-| v2.0.59 | [`v2.0.59`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.59) | [`1813afa`](https://github.com/ai-action/setup-ollama/commit/1813afab13fe1160d35ab922ad3419beb99cf96a) |
-| v2.0.60 | [`v2.0.60`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.60) | [`b4e0c35`](https://github.com/ai-action/setup-ollama/commit/b4e0c35c1930960fe02a34fd9dbb5d0528595c35) |
-| v2.0.61 | [`v2.0.61`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.61) | [`3eda917`](https://github.com/ai-action/setup-ollama/commit/3eda917064a3352c4b55053c1fb16181fedab4f3) |
-| v2.0.62 | [`v2.0.62`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.62) | [`591531f`](https://github.com/ai-action/setup-ollama/commit/591531fff1153f90ea7a512c1c528231856f1036) |
-| v2.0.63 | [`v2.0.63`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.63) | [`b1d0412`](https://github.com/ai-action/setup-ollama/commit/b1d04121d9feaa3b95181cd2f409a8b36318f425) |
-| v2.0.64 | [`v2.0.64`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.64) | [`1fc1796`](https://github.com/ai-action/setup-ollama/commit/1fc1796fd96f76470584d3a2fdc95e6327655dd6) |
-| v2.0.65 | [`v2.0.65`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.65) | [`6c7c28b`](https://github.com/ai-action/setup-ollama/commit/6c7c28bbccc41d975145a7dd56de6bf57c252cfa) |
-| v2.0.66 | [`v2.0.66`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.66) | [`06fe4d1`](https://github.com/ai-action/setup-ollama/commit/06fe4d119bf16901caeaba0237a1d9986e6218b3) |
-| v2.0.67 | [`v2.0.67`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.67) | [`3372a73`](https://github.com/ai-action/setup-ollama/commit/3372a7352f1b1b4ea18181537f028feed3621e26) |
-| v2.0.68 | [`v2.0.68`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.68) | [`7549c61`](https://github.com/ai-action/setup-ollama/commit/7549c61d58cdf566e46f6a558c82d71505758457) |
-| v2.0.69 | [`v2.0.69`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.69) | [`e6a343e`](https://github.com/ai-action/setup-ollama/commit/e6a343efd08305c798b8d272f986c070cf281795) |
-| v2.0.70 | [`v2.0.70`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.70) | [`82ab6f5`](https://github.com/ai-action/setup-ollama/commit/82ab6f5fb103c439756db53e8621579397077d67) |
-| v2.0.71 | [`v2.0.71`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.71) | [`3f581ee`](https://github.com/ai-action/setup-ollama/commit/3f581ee292df757e21de2bcb3b573bd8a44f198d) |
-| v2.0.72 | [`v2.0.72`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.72) | [`a0255f5`](https://github.com/ai-action/setup-ollama/commit/a0255f53ee7891c142922b009af13c698dee612b) |
+## Quick Start
+
+```yaml
+# .github/workflows/ollama.yml
+name: ollama
+on: push
+jobs:
+  ollama:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Ollama
+        uses: ai-action/setup-ollama@v2
+
+      - name: Run model
+        run: ollama run gemma4:e2b 'What model are you?'
+```
+
+## Usage
+
+Install Ollama:
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+```
+
+Run a prompt against a [model](https://ollama.com/library):
+
+```yaml
+- run: ollama run gemma4 "What's a large language model?"
+```
+
+Cache the model to speed up CI:
+
+```yaml
+- uses: actions/cache@v6
+  with:
+    path: ~/.ollama
+    key: ${{ runner.os }}-ollama
+
+- run: ollama run gemma4 'Define cache'
+```
+
+See [action.yml](action.yml).
+
+## Inputs
+
+### `version`
+
+**Optional**: The CLI [version](https://github.com/ollama/ollama/releases). Defaults to [`0.33.2`](https://github.com/ollama/ollama/releases/tag/v0.33.2):
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+  with:
+    version: 0.33.2
+```
+
+### `name`
+
+**Optional**: The CLI name. Defaults to `ollama`:
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+  with:
+    name: ollama
+```
+
+## FAQ
+
+### zstd: Cannot exec: No such file or directory
+
+If you get the error on a Linux self-hosted runner:
+
+```
+tar (child): zstd: Cannot exec: No such file or directory
+tar (child): Error is not recoverable: exiting now
+```
+
+It means that [zstd](https://github.com/facebook/zstd) is not installed.
+
+To fix this error, you can install `zstd`:
+
+```yaml
+- name: Install zstd
+  run: apt-get update && apt-get install zstd
+```
+
+Or use Ollama version <[0.14.0](https://github.com/ollama/ollama/releases/tag/v0.14.0):
+
+```yaml
+- uses: ai-action/setup-ollama@v2
+  with:
+    version: 0.13.5
+```
+
+See [#423](https://github.com/ai-action/setup-ollama/issues/423).
+
+## License
+
+[MIT](LICENSE)
 
 ## Privacy
 

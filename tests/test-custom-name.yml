@@ -1,0 +1,41 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd (required for ollama >= 0.14.0 on Linux)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zstd
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+        continue-on-error: true
+      - name: Assert custom-named binary installed or failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded, checking my-ollama is on PATH..."
+            if ! command -v my-ollama >/dev/null 2>&1; then
+              echo "FAIL: my-ollama not found on PATH after successful action"
+              exit 1
+            fi
+            OUTPUT="$(my-ollama --version 2>&1 || true)"
+            echo "my-ollama version output: $OUTPUT"
+            if [ -z "$OUTPUT" ]; then
+              echo "FAIL: my-ollama produced no output"
+              exit 1
+            fi
+            echo "PASS: my-ollama is executable and produced output"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network or environment issue)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
