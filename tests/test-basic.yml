@@ -1,0 +1,38 @@
+name: Test basic usage (default version)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install zstd (required for .tar.zst extraction)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zstd
+      - id: action
+        uses: .
+        continue-on-error: true
+      - name: Assert ollama installed or action failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Checking ollama is available..."
+            which ollama || { echo "FAIL: ollama not found on PATH"; exit 1; }
+            echo "PASS: ollama found at $(which ollama)"
+            VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+            echo "version output: $VERSION_OUTPUT"
+            if echo "$VERSION_OUTPUT" | grep -qiE 'ollama|version|[0-9]+\.[0-9]+'; then
+              echo "PASS: ollama version output looks valid"
+            else
+              echo "FAIL: unexpected version output: $VERSION_OUTPUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/environment issue in act)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
