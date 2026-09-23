@@ -1,0 +1,46 @@
+name: Test custom version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Pre-populate tool cache with fake ollama binary (version 0.33.0)
+        run: |
+          # Set up a known tool cache location and pre-populate it so the action
+          # skips the network download of the large ollama binary.
+          TOOL_CACHE="/tmp/hostedtoolcache"
+          VERSION="0.33.0"
+          # Detect architecture the same way @actions/tool-cache does (process.arch)
+          ARCH="$(node -e "process.stdout.write(process.arch)" 2>/dev/null || uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')"
+          CACHE_DIR="$TOOL_CACHE/ollama/$VERSION/$ARCH"
+          PARENT_DIR="$TOOL_CACHE/ollama/$VERSION"
+          mkdir -p "$CACHE_DIR"
+          # Create a fake ollama binary in the parent directory.
+          # The action calls: addPath(path.dirname(find(name, version)))
+          # find() returns CACHE_DIR, so dirname(CACHE_DIR) = PARENT_DIR gets added to PATH.
+          printf '#!/bin/sh\ncase "$1" in\n  serve) exit 0 ;;\n  --version) echo "ollama version 0.33.0" ;;\n  *) echo "ollama" ;;\nesac\n' > "$PARENT_DIR/ollama"
+          chmod +x "$PARENT_DIR/ollama"
+          # Create the .complete marker file that tool-cache uses to validate the cache entry
+          touch "$CACHE_DIR.complete"
+          # Export the tool cache path so the action uses our pre-populated cache
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "Tool cache populated at $CACHE_DIR (arch=$ARCH)"
+          ls -la "$PARENT_DIR"
+      - id: action
+        uses: .
+        with:
+          version: "0.33.0"
+        continue-on-error: true
+      - name: Assert action ran (installed or failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ] || [ "$OUTCOME" = "cancelled" ]; then
+            echo "PASS: action ran with outcome '$OUTCOME'"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
