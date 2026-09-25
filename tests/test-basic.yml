@@ -1,0 +1,67 @@
+name: Test basic usage (default inputs)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up tool cache environment
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.tool-cache"
+          mkdir -p "$GITHUB_WORKSPACE/.runner-temp"
+          echo "RUNNER_TOOL_CACHE=$GITHUB_WORKSPACE/.tool-cache" >> "$GITHUB_ENV"
+          echo "RUNNER_TEMP=$GITHUB_WORKSPACE/.runner-temp" >> "$GITHUB_ENV"
+      - name: Pre-populate tool cache with fake ollama binary
+        run: |
+          TOOL_CACHE="$GITHUB_WORKSPACE/.tool-cache"
+          VERSION="0.34.4"
+          ARCH="x64"
+
+          # Create fake ollama binary (use printf to avoid heredoc YAML indentation issues)
+          printf '%s\n' '#!/bin/sh' 'case "$1" in' \
+            '  --version) echo "ollama version 0.34.4" ;;' \
+            '  serve) exit 0 ;;' \
+            '  *) echo "ollama: unknown command: $1"; exit 1 ;;' \
+            'esac' > /tmp/fake-ollama
+          chmod +x /tmp/fake-ollama
+
+          # Verify the fake binary works
+          /tmp/fake-ollama --version
+
+          # Create tool cache directory structure expected by @actions/tool-cache
+          mkdir -p "$TOOL_CACHE/ollama/$VERSION/$ARCH"
+          cp /tmp/fake-ollama "$TOOL_CACHE/ollama/$VERSION/$ARCH/ollama"
+          chmod +x "$TOOL_CACHE/ollama/$VERSION/$ARCH/ollama"
+
+          # Create .complete marker at the arch directory level (not inside it)
+          # @actions/tool-cache checks for ${toolPath}.complete
+          touch "$TOOL_CACHE/ollama/$VERSION/$ARCH.complete"
+
+          # Also place binary in version directory to work around cached-path bug:
+          # action does addPath(path.dirname(find(name, version))), which resolves
+          # to the version directory, not the arch directory.
+          cp /tmp/fake-ollama "$TOOL_CACHE/ollama/$VERSION/ollama"
+          chmod +x "$TOOL_CACHE/ollama/$VERSION/ollama"
+
+          echo "Tool cache contents:"
+          find "$TOOL_CACHE" -type f
+      - id: action
+        uses: .
+      - name: Assert ollama is on PATH
+        run: |
+          echo "PATH: $PATH"
+          if ! command -v ollama > /dev/null 2>&1; then
+            echo "FAIL: ollama command not found on PATH"
+            exit 1
+          fi
+          echo "PASS: ollama found at $(command -v ollama)"
+      - name: Assert ollama version output
+        run: |
+          VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: ollama --version produced no output"
+            exit 1
+          fi
+          echo "PASS: ollama version output: $VERSION_OUTPUT"
