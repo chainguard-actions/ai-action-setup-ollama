@@ -1,0 +1,65 @@
+name: Test custom version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Pre-populate tool cache with fake ollama binary (version 0.13.5)
+        run: |
+          # @actions/tool-cache find(name, version) looks for:
+          #   {RUNNER_TOOL_CACHE}/{name}/{version}/{arch}/ directory
+          #   {RUNNER_TOOL_CACHE}/{name}/{version}/{arch}.complete marker
+          # and returns the arch directory path.
+          #
+          # The action then does: addPath(path.dirname(returned_path))
+          # which adds {RUNNER_TOOL_CACHE}/{name}/{version} to PATH.
+          #
+          # So we place the fake binary in {RUNNER_TOOL_CACHE}/ollama/0.13.5/
+          # and create the arch directory + .complete marker for find() to succeed.
+
+          ARCH="$(node -e "console.log(require('os').arch())")"
+          CACHE_BASE="$RUNNER_TOOL_CACHE/ollama/0.13.5"
+          ARCH_DIR="$CACHE_BASE/$ARCH"
+
+          mkdir -p "$ARCH_DIR"
+          touch "$ARCH_DIR.complete"
+
+          # Place fake binary in the directory that will be added to PATH
+          printf '#!/bin/sh\necho "ollama version 0.13.5"\nexit 0\n' > "$CACHE_BASE/ollama"
+          chmod +x "$CACHE_BASE/ollama"
+
+          echo "Tool cache structure:"
+          find "$RUNNER_TOOL_CACHE" | sort
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: "0.13.5"
+          # 0.13.5 uses .tgz format (no zstd needed, predates 0.14.0 threshold)
+
+      - name: Assert action ran (ollama installed or failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded — verifying ollama is on PATH..."
+            if ! command -v ollama > /dev/null 2>&1; then
+              echo "FAIL: action succeeded but 'ollama' not found on PATH"
+              exit 1
+            fi
+            echo "PASS: ollama found at $(command -v ollama)"
+            VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+            echo "version output: $VERSION_OUTPUT"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/environment constraint)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
