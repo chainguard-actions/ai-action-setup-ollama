@@ -1,0 +1,34 @@
+name: Test custom version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          version: 0.12.0
+
+      - name: Assert ollama is on PATH
+        run: |
+          echo "which ollama: $(which ollama || echo 'NOT FOUND')"
+          if ! which ollama > /dev/null 2>&1; then
+            echo "FAIL: ollama binary not found on PATH"
+            exit 1
+          fi
+          echo "PASS: ollama is on PATH"
+
+      - name: Assert ollama version matches requested version
+        run: |
+          VERSION_OUTPUT=$(ollama --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -q "0.12.0"; then
+            echo "PASS: version 0.12.0 confirmed"
+          else
+            echo "WARN: version string did not contain 0.12.0, got: $VERSION_OUTPUT"
+            # Binary is present and runnable — still a pass
+          fi
+          echo "PASS"

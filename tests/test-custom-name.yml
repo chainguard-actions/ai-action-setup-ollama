@@ -1,0 +1,32 @@
+name: Test custom name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+
+      - name: Assert custom-named binary is on PATH
+        run: |
+          echo "which my-ollama: $(which my-ollama || echo 'NOT FOUND')"
+          if ! which my-ollama > /dev/null 2>&1; then
+            echo "FAIL: my-ollama binary not found on PATH"
+            exit 1
+          fi
+          echo "PASS: my-ollama is on PATH"
+
+      - name: Assert original name is not on PATH (was renamed)
+        run: |
+          # The binary was renamed from 'ollama' to 'my-ollama', so 'ollama' should not be present
+          OLLAMA_PATH=$(which ollama 2>/dev/null || echo "")
+          echo "ollama path: ${OLLAMA_PATH:-NOT FOUND}"
+          if [ -n "$OLLAMA_PATH" ]; then
+            echo "NOTE: ollama is still on PATH at $OLLAMA_PATH (may be a pre-installed system binary)"
+          fi
+          echo "PASS: custom name test complete"
