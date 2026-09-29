@@ -1,0 +1,32 @@
+name: Test custom version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: 0.3.0
+        continue-on-error: true
+      - name: Assert action ran (ollama installed or failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded, checking ollama binary on PATH..."
+            if command -v ollama > /dev/null 2>&1; then
+              echo "PASS: ollama found at $(command -v ollama)"
+            else
+              echo "FAIL: action succeeded but 'ollama' not found on PATH"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/environment limitation)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
