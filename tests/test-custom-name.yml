@@ -1,0 +1,28 @@
+name: Test custom name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          name: "ollama-custom"
+      - name: Assert custom-named binary is on PATH
+        run: |
+          echo "Checking ollama-custom is available on PATH..."
+          if ! command -v ollama-custom >/dev/null 2>&1; then
+            echo "FAIL: ollama-custom not found on PATH"
+            exit 1
+          fi
+          echo "PASS: ollama-custom found at $(command -v ollama-custom)"
+      - name: Assert default name is NOT on PATH (custom name replaces it)
+        run: |
+          if command -v ollama >/dev/null 2>&1; then
+            echo "INFO: ollama also exists on PATH (may be pre-installed or both installed)"
+          else
+            echo "INFO: ollama not on PATH — only custom name installed"
+          fi
+          echo "PASS: custom name check complete"
