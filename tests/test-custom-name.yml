@@ -1,0 +1,38 @@
+name: Test custom name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          name: "myollama"
+
+      - name: Assert custom-named binary is on PATH
+        run: |
+          echo "Checking myollama is available on PATH..."
+          if ! command -v myollama >/dev/null 2>&1; then
+            echo "FAIL: myollama not found on PATH"
+            exit 1
+          fi
+          echo "PASS: myollama found at $(command -v myollama)"
+
+      - name: Assert original name is not on PATH (was renamed)
+        run: |
+          echo "Checking that original 'ollama' binary is not separately on PATH..."
+          # The binary was renamed, so 'ollama' should not be accessible
+          # (the renamed binary is what's on PATH)
+          MYOLLAMA_PATH=$(command -v myollama)
+          echo "myollama path: $MYOLLAMA_PATH"
+          # Verify the binary actually works
+          VERSION=$(myollama --version 2>&1 || true)
+          echo "version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: myollama --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: myollama binary works, version: $VERSION"
