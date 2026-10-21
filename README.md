@@ -38,6 +38,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v2.0.79 | [`v2.0.79`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.0.79) | [`6c94538`](https://github.com/ai-action/setup-ollama/commit/6c9453881a29f2604c0ef56e20344141cc556dfb) |
 | v2.1.0 | [`v2.1.0`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.1.0) | [`bb1a15e`](https://github.com/ai-action/setup-ollama/commit/bb1a15e4315698e668874dc3aad323d7c6d57ede) |
 | v2.1.1 | [`v2.1.1`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.1.1) | [`5f3116a`](https://github.com/ai-action/setup-ollama/commit/5f3116a5cd85594f351c3f8600a5ac08e63bc285) |
+| v2.1.10 | [`v2.1.10`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.1.10) | [`0ee037b`](https://github.com/ai-action/setup-ollama/commit/0ee037bc9ec795415d12e7e1e99dd91c2c1b6093) |
 | v2.1.2 | [`v2.1.2`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.1.2) | [`80ec1fd`](https://github.com/ai-action/setup-ollama/commit/80ec1fde1ecef3f72b57cc8942bc7d6ff15e56cb) |
 | v2.1.3 | [`v2.1.3`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.1.3) | [`2bdce2f`](https://github.com/ai-action/setup-ollama/commit/2bdce2f0507c7a0765f8ba9ea6204cc8c9486b42) |
 | v2.1.4 | [`v2.1.4`](https://github.com/chainguard-actions/ai-action-setup-ollama/tree/v2.1.4) | [`7251aeb`](https://github.com/ai-action/setup-ollama/commit/7251aeb8bd484f01af7bff1f887073bcbd82df5c) |
