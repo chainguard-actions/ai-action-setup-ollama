@@ -1,0 +1,37 @@
+name: Test legacy version (tgz archive)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: 0.6.0
+      - name: Assert ollama legacy version is installed
+        run: |
+          if ! command -v ollama >/dev/null 2>&1; then
+            echo "FAIL: ollama not found on PATH"
+            exit 1
+          fi
+          OUT="$(ollama --version 2>&1 || true)"
+          echo "version output: $OUT"
+          if ! echo "$OUT" | grep -q "0.6.0"; then
+            echo "FAIL: expected version 0.6.0"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert ollama server is running
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:11434/api/version; then
+              echo
+              echo "PASS: server responded"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: ollama server did not respond"
+          exit 1

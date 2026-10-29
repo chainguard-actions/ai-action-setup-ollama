@@ -1,0 +1,45 @@
+name: Test custom binary name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure zstd is available
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            SUDO=""; command -v sudo >/dev/null 2>&1 && SUDO="sudo"
+            $SUDO apt-get update -y && $SUDO apt-get install -y zstd
+          fi
+          zstd --version
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+      - name: Assert renamed binary is on PATH
+        run: |
+          if ! command -v my-ollama >/dev/null 2>&1; then
+            echo "FAIL: my-ollama not found on PATH"
+            exit 1
+          fi
+          echo "found: $(command -v my-ollama)"
+          OUT="$(my-ollama --version 2>&1 || true)"
+          echo "version output: $OUT"
+          if ! echo "$OUT" | grep -q "0.40.13"; then
+            echo "FAIL: expected version 0.40.13"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert server started via renamed binary
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:11434/api/version; then
+              echo
+              echo "PASS: server responded"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: ollama server did not respond"
+          exit 1
