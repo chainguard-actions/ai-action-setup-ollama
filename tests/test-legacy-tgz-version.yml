@@ -1,0 +1,22 @@
+name: Test legacy version (tgz, pre-0.14.0)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: 0.12.11
+      - name: Assert installed version
+        run: |
+          command -v ollama || { echo "FAIL: ollama not on PATH"; exit 1; }
+          OUT="$(ollama --version 2>&1 || true)"
+          echo "version output: $OUT"
+          if ! echo "$OUT" | grep -q "0.12.11"; then
+            echo "FAIL: expected version 0.12.11"
+            exit 1
+          fi
+          echo "PASS"
