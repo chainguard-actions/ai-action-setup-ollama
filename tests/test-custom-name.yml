@@ -1,0 +1,28 @@
+name: Test custom binary name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure zstd is available (needed for .tar.zst extraction)
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            SUDO=""; [ "$(id -u)" != "0" ] && SUDO="sudo"
+            $SUDO apt-get update -y && $SUDO apt-get install -y zstd
+          fi
+      - id: action
+        uses: .
+        with:
+          name: my-ollama
+      - name: Assert renamed binary on PATH
+        run: |
+          command -v my-ollama || { echo "FAIL: my-ollama not on PATH"; exit 1; }
+          OUT="$(my-ollama --version 2>&1 || true)"
+          echo "version output: $OUT"
+          if ! echo "$OUT" | grep -q "0.40.15"; then
+            echo "FAIL: expected version 0.40.15"
+            exit 1
+          fi
+          echo "PASS"
