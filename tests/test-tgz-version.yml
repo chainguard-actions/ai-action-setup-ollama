@@ -1,0 +1,35 @@
+name: Test older version (tgz archive, pre-zst)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Use a fresh tool cache
+        run: |
+          TC="$(mktemp -d /tmp/toolcache-XXXXXX)"
+          echo "RUNNER_TOOL_CACHE=$TC" >> "$GITHUB_ENV"
+          echo "tool cache: $TC"
+      - id: action
+        uses: .
+        with:
+          version: 0.13.0
+      - name: Assert ollama is installed and runs
+        run: |
+          command -v ollama || { echo "FAIL: ollama not on PATH"; exit 1; }
+          OUT="$(ollama --version 2>&1 || true)"
+          echo "actual: $OUT"
+          if ! echo "$OUT" | grep -qi "version"; then
+            echo "FAIL: ollama --version did not report a version"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert binary was cached under version 0.13.0
+        run: |
+          ls -R "$RUNNER_TOOL_CACHE" || true
+          if [ -z "$(find "$RUNNER_TOOL_CACHE/ollama/0.13.0" -name ollama -type f 2>/dev/null)" ]; then
+            echo "FAIL: ollama 0.13.0 not cached"
+            exit 1
+          fi
+          echo "PASS"

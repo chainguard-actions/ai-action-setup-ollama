@@ -1,0 +1,50 @@
+name: Test custom CLI name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure zstd is available and use a fresh tool cache
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            SUDO=""
+            if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+            $SUDO apt-get update -y
+            $SUDO apt-get install -y zstd
+          fi
+          TC="$(mktemp -d /tmp/toolcache-XXXXXX)"
+          echo "RUNNER_TOOL_CACHE=$TC" >> "$GITHUB_ENV"
+          echo "tool cache: $TC"
+      - id: action
+        uses: .
+        with:
+          name: myollama
+      - name: Assert binary is available under the custom name
+        run: |
+          P="$(command -v myollama)" || { echo "FAIL: myollama not on PATH"; exit 1; }
+          echo "path: $P"
+          if [ -e "$(dirname "$P")/ollama" ]; then
+            echo "FAIL: original 'ollama' binary was not renamed"
+            exit 1
+          fi
+          OUT="$(myollama --version 2>&1 || true)"
+          echo "actual: $OUT"
+          if ! echo "$OUT" | grep -qi "version"; then
+            echo "FAIL: myollama --version did not report a version"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert server started via custom name
+        run: |
+          for i in $(seq 1 30); do
+            RESP="$(curl -s http://127.0.0.1:11434/ || true)"
+            if echo "$RESP" | grep -q "Ollama is running"; then
+              echo "PASS"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: server not responding; last: $RESP"
+          exit 1

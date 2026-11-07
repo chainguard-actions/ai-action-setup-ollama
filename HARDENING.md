@@ -10,5 +10,5 @@
 
 **Harden Agent Version:** `2`
 
-Action **ai-action--setup-ollama/v2** was hardened automatically. 0 finding(s) were identified and resolved across 0 iteration(s).
+Action **ai-action--setup-ollama/v2** was analyzed against the hardening policy and no findings were identified: the upstream action already passes every check.
 
