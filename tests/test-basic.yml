@@ -1,0 +1,45 @@
+name: Test basic usage (default version)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure zstd is available (default version ships as .tar.zst)
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            if command -v sudo >/dev/null 2>&1; then SUDO=sudo; else SUDO=""; fi
+            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq zstd
+          fi
+          zstd --version
+      - id: action
+        uses: .
+      - name: Assert ollama is on PATH
+        run: |
+          if ! command -v ollama >/dev/null 2>&1; then
+            echo "FAIL: ollama not found on PATH"
+            exit 1
+          fi
+          echo "found: $(command -v ollama)"
+          echo "PASS"
+      - name: Assert ollama version
+        run: |
+          OUT="$(ollama -v 2>&1 || true)"
+          echo "actual: $OUT"
+          if ! echo "$OUT" | grep -q "0.40.16"; then
+            echo "FAIL: expected version 0.40.16"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert ollama server is running
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:11434/ >/dev/null 2>&1; then
+              echo "PASS: server responding"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: ollama server not responding on 11434"
+          exit 1

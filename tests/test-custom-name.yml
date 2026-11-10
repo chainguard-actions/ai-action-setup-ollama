@@ -1,0 +1,41 @@
+name: Test custom CLI name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure zstd is available (default version ships as .tar.zst)
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            if command -v sudo >/dev/null 2>&1; then SUDO=sudo; else SUDO=""; fi
+            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq zstd
+          fi
+          zstd --version
+      - id: action
+        uses: .
+        with:
+          name: ollama-custom
+      - name: Assert renamed binary is on PATH
+        run: |
+          if ! command -v ollama-custom >/dev/null 2>&1; then
+            echo "FAIL: ollama-custom not found on PATH"
+            exit 1
+          fi
+          BIN="$(command -v ollama-custom)"
+          echo "found: $BIN"
+          if [ -e "$(dirname "$BIN")/ollama" ]; then
+            echo "FAIL: original 'ollama' binary still present next to renamed one"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert renamed binary runs
+        run: |
+          OUT="$(ollama-custom -v 2>&1 || true)"
+          echo "actual: $OUT"
+          if ! echo "$OUT" | grep -qi "version"; then
+            echo "FAIL: expected version output"
+            exit 1
+          fi
+          echo "PASS"
