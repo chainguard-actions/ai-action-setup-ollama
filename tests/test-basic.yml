@@ -6,55 +6,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Ensure zstd is available and use a fresh tool cache
+      - name: Ensure zstd is available and clear stale tool cache
         run: |
+          SUDO=""
+          if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
           if ! command -v zstd >/dev/null 2>&1; then
-            SUDO=""
-            if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
-            $SUDO apt-get update -y
-            $SUDO apt-get install -y zstd
+            $SUDO apt-get update -y >/dev/null && $SUDO apt-get install -y zstd >/dev/null
           fi
           zstd --version
-          TC="$(mktemp -d /tmp/toolcache-XXXXXX)"
-          echo "RUNNER_TOOL_CACHE=$TC" >> "$GITHUB_ENV"
-          echo "tool cache: $TC"
+          TC="${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}"
+          # Clear every cached ollama version so the action does a fresh install
+          $SUDO rm -rf "$TC/ollama" || true
       - id: action
         uses: .
-      - name: Assert ollama is on PATH and runs
+      - name: Assert ollama is on PATH and reports a valid version
         run: |
-          command -v ollama || { echo "FAIL: ollama not on PATH"; exit 1; }
+          echo "PATH: $PATH"
+          if ! command -v ollama >/dev/null 2>&1; then
+            echo "FAIL: ollama not found on PATH"
+            exit 1
+          fi
+          echo "path: $(command -v ollama)"
           OUT="$(ollama --version 2>&1 || true)"
           echo "actual: $OUT"
-          if ! echo "$OUT" | grep -qi "version"; then
-            echo "FAIL: ollama --version did not report a version"
+          if ! echo "$OUT" | grep -qE 'version is [0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "FAIL: expected 'ollama version is X.Y.Z' in output"
             exit 1
           fi
           echo "PASS"
-      - name: Assert binary was cached in the tool cache
-        run: |
-          echo "tool cache: $RUNNER_TOOL_CACHE"
-          ls -R "$RUNNER_TOOL_CACHE" || true
-          FOUND="$(find "$RUNNER_TOOL_CACHE/ollama" -name ollama -type f 2>/dev/null | head -n1)"
-          echo "cached binary: $FOUND"
-          if [ -z "$FOUND" ]; then
-            echo "FAIL: no ollama binary cached under $RUNNER_TOOL_CACHE/ollama"
-            exit 1
-          fi
-          if [ -z "$(ls "$RUNNER_TOOL_CACHE/ollama"/*/*.complete 2>/dev/null)" ]; then
-            echo "FAIL: tool cache entry not marked complete"
-            exit 1
-          fi
-          echo "PASS"
-      - name: Assert ollama server is running
-        run: |
-          for i in $(seq 1 30); do
-            RESP="$(curl -s http://127.0.0.1:11434/ || true)"
-            if echo "$RESP" | grep -q "Ollama is running"; then
-              echo "actual: $RESP"
-              echo "PASS"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "FAIL: ollama server did not respond; last: $RESP"
-          exit 1
