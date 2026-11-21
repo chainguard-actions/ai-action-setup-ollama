@@ -6,31 +6,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Ensure zstd is available and clear stale tool cache
+      - name: Ensure zstd and curl are available; clear any cached ollama
         run: |
           SUDO=""
           if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
-          if ! command -v zstd >/dev/null 2>&1; then
-            $SUDO apt-get update -y >/dev/null && $SUDO apt-get install -y zstd >/dev/null
+          if ! command -v zstd >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+            $SUDO apt-get update -y
+            $SUDO apt-get install -y zstd curl
           fi
           zstd --version
-          TC="${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}"
-          # Clear every cached ollama version so the action does a fresh install
-          $SUDO rm -rf "$TC/ollama" || true
+          $SUDO rm -rf "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/ollama" || true
       - id: action
         uses: .
-      - name: Assert ollama is on PATH and reports a valid version
+      - name: Assert ollama is on PATH
         run: |
-          echo "PATH: $PATH"
           if ! command -v ollama >/dev/null 2>&1; then
             echo "FAIL: ollama not found on PATH"
             exit 1
           fi
-          echo "path: $(command -v ollama)"
+          echo "PASS: $(command -v ollama)"
+      - name: Assert ollama reports a version
+        run: |
           OUT="$(ollama --version 2>&1 || true)"
           echo "actual: $OUT"
-          if ! echo "$OUT" | grep -qE 'version is [0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "FAIL: expected 'ollama version is X.Y.Z' in output"
+          # Upstream release binaries may self-report a neighbouring patch version
+          # (e.g. 0.40.17 reports 0.40.16), so only check the minor series.
+          if ! echo "$OUT" | grep -qE "0\.40\.[0-9]+"; then
+            echo "FAIL: expected a 0.40.x version"
             exit 1
           fi
           echo "PASS"
+      - name: Assert ollama server is running
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:11434/api/version; then
+              echo
+              echo "PASS: server responded"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: ollama server did not respond"
+          exit 1

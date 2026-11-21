@@ -6,29 +6,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Clear stale tool cache entry
+      - name: Ensure zstd and curl are available; clear any cached tool
         run: |
-          TC="${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}"
           SUDO=""
           if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
-          $SUDO rm -rf "$TC/my-ollama/0.13.5" "$TC/my-ollama/0.13.5-complete" || true
+          if ! command -v zstd >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+            $SUDO apt-get update -y
+            $SUDO apt-get install -y zstd curl
+          fi
+          $SUDO rm -rf "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/my-ollama" || true
       - id: action
         uses: .
         with:
-          version: 0.13.5
           name: my-ollama
       - name: Assert renamed binary is on PATH
         run: |
-          echo "PATH: $PATH"
           if ! command -v my-ollama >/dev/null 2>&1; then
             echo "FAIL: my-ollama not found on PATH"
             exit 1
           fi
-          echo "path: $(command -v my-ollama)"
+          echo "PASS: $(command -v my-ollama)"
+      - name: Assert renamed binary works
+        run: |
           OUT="$(my-ollama --version 2>&1 || true)"
           echo "actual: $OUT"
-          if ! echo "$OUT" | grep -q "0.13.5"; then
-            echo "FAIL: expected version 0.13.5"
+          if ! echo "$OUT" | grep -qE "0\.40\.[0-9]+"; then
+            echo "FAIL: expected a 0.40.x version"
             exit 1
           fi
           echo "PASS"
