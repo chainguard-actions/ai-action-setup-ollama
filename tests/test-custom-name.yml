@@ -1,0 +1,34 @@
+name: Test custom CLI name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure zstd is available (needed for .tar.zst extraction)
+        run: |
+          if ! command -v zstd >/dev/null 2>&1; then
+            SUDO=""
+            if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO=sudo; fi
+            $SUDO apt-get update -y
+            $SUDO apt-get install -y zstd
+          fi
+      - id: action
+        uses: .
+        with:
+          name: myollama
+      - name: Assert renamed binary is on PATH
+        run: |
+          if ! command -v myollama >/dev/null 2>&1; then
+            echo "FAIL: myollama not found on PATH"
+            exit 1
+          fi
+          echo "found: $(command -v myollama)"
+          OUT="$(myollama --version 2>&1 || true)"
+          echo "output: $OUT"
+          if ! echo "$OUT" | grep -qi "version"; then
+            echo "FAIL: myollama --version did not report a version"
+            exit 1
+          fi
+          echo "PASS"
