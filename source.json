@@ -2,7 +2,7 @@
   "owner": "ai-action",
   "repo": "setup-ollama",
   "version": "v2",
-  "commit_sha": "5818dbc81d8dbc169e975992af6dffc315447702",
+  "commit_sha": "9865531c375e54c1dd1dd467c207c0ae3e98ab77",
   "url": "https://github.com/ai-action/setup-ollama",
   "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",

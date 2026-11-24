@@ -6,33 +6,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Ensure zstd and curl are available; clear any cached ollama
+      - name: Ensure zstd is available (default version ships .tar.zst)
         run: |
-          SUDO=""
-          if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
-          if ! command -v zstd >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
-            $SUDO apt-get update -y
-            $SUDO apt-get install -y zstd curl
+          if ! command -v zstd >/dev/null 2>&1; then
+            SUDO=""
+            if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+            $SUDO apt-get update -y && $SUDO apt-get install -y zstd
           fi
           zstd --version
-          $SUDO rm -rf "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/ollama" || true
       - id: action
         uses: .
-      - name: Assert ollama is on PATH
+      - name: Assert ollama is on PATH and reports a version
         run: |
           if ! command -v ollama >/dev/null 2>&1; then
             echo "FAIL: ollama not found on PATH"
             exit 1
           fi
-          echo "PASS: $(command -v ollama)"
-      - name: Assert ollama reports a version
-        run: |
+          echo "ollama path: $(command -v ollama)"
           OUT="$(ollama --version 2>&1 || true)"
-          echo "actual: $OUT"
-          # Upstream release binaries may self-report a neighbouring patch version
-          # (e.g. 0.40.17 reports 0.40.16), so only check the minor series.
-          if ! echo "$OUT" | grep -qE "0\.40\.[0-9]+"; then
-            echo "FAIL: expected a 0.40.x version"
+          echo "version output: $OUT"
+          # Note: the upstream 0.40.18 release binary self-reports a slightly
+          # different patch version, so only assert the 0.40.x line.
+          if ! echo "$OUT" | grep -qE "version is 0\.40\.[0-9]+"; then
+            echo "FAIL: expected an ollama 0.40.x version string"
             exit 1
           fi
           echo "PASS"
@@ -46,5 +42,5 @@ jobs:
             fi
             sleep 2
           done
-          echo "FAIL: ollama server did not respond"
+          echo "FAIL: ollama server did not respond on port 11434"
           exit 1
